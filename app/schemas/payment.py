@@ -12,7 +12,7 @@ class CreatePaymentRequest(BaseModel):
     amount: Decimal
     currency: Currency
     description: str | None = None
-    metadata: dict = {}
+    extra_data: dict = {}
     webhook_url: HttpUrl
 
 
@@ -29,7 +29,7 @@ class PaymentResponse(BaseModel):
     amount: Decimal
     currency: Currency
     description: str | None
-    metadata: dict
+    extra_data: dict
     status: PaymentStatus
     webhook_url: str
     created_at: datetime

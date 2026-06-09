@@ -34,12 +34,14 @@ class Payment(Base, TimestampMixin):
         nullable=False,
     )
 
-    description: Mapped[str | None]
+    description: Mapped[str | None] = mapped_column(
+        nullable=True
+    )
 
     extra_data: Mapped[dict] = mapped_column(
-        "metadata",
         JSON,
         default=dict,
+        nullable=False
     )
 
     status: Mapped[PaymentStatus] = mapped_column(

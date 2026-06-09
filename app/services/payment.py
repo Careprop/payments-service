@@ -31,7 +31,7 @@ class PaymentService:
             amount=payload.amount,
             currency=payload.currency,
             description=payload.description,
-            extra_data=payload.metadata,
+            extra_data=payload.extra_data,
             webhook_url=str(payload.webhook_url),
             status=PaymentStatus.PENDING,
             idempotency_key=idempotency_key,
