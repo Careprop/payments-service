@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     postgres_user: str
     postgres_password: str
 
+    rabbitmq_user: str
+    rabbitmq_password: str
     rabbitmq_host: str
     rabbitmq_port: int
 
@@ -29,6 +31,16 @@ class Settings(BaseSettings):
             f"{self.postgres_host}:"
             f"{self.postgres_port}/"
             f"{self.postgres_db}"
+        )
+
+    @property
+    def amqp_url(self) -> str:
+        return (
+            f"amqp://"
+            f"{settings.rabbitmq_user}:"
+            f"{settings.rabbitmq_password}@"
+            f"{settings.rabbitmq_host}:"
+            f"{settings.rabbitmq_port}/"
         )
 
 

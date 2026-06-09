@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: payments_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: payments
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: payments_rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: payments_api
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+  consumer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.consumer
+    container_name: payments_consumer
+    depends_on:
+      - rabbitmq
+      - postgres
+    env_file:
+      - .env
+
+  publisher:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.publisher
+    container_name: payments_publisher
+    depends_on:
+      - postgres
+      - rabbitmq
+    env_file:
+      - .env
+
+volumes:
+  pgdata:
