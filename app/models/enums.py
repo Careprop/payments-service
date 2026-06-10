@@ -9,11 +9,13 @@ class Currency(StrEnum):
 
 class PaymentStatus(StrEnum):
     PENDING = "pending"
+    PROCESSING = 'processing'
     SUCCEEDED = "succeeded"
     FAILED = "failed"
 
 
 class OutboxStatus(StrEnum):
     PENDING = "pending"
+    PROCESSING = 'processing'
     PUBLISHED = "published"
     FAILED = "failed"  # unused

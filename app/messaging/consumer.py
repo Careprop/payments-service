@@ -11,23 +11,23 @@ from app.core.database import session_factory
 gateway = FakePaymentGateway()
 webhook = WebhookService()
 
-
 @broker.subscriber("payments.new")
 async def process_payment(event: PaymentEvent):
     async with session_factory() as session:
         repo = PaymentRepository(session)
 
-        payment = await repo.get(event.payment_id)
+        payment = await repo.claim_for_processing(event.payment_id)
         if not payment:
             return
 
-        if payment.status != PaymentStatus.PENDING:
-            return
+        await session.commit()
 
         result = await gateway.process(payment=payment)
-        payment.status = result
+        if result == PaymentStatus.SUCCEEDED:
+            await repo.mark_succeeded(payment.id)
+        else:
+            await repo.mark_failed(payment.id)
 
-        await repo.update(payment)
         await session.commit()
 
         try:
@@ -35,14 +35,15 @@ async def process_payment(event: PaymentEvent):
                 payment.webhook_url,
                 {
                     "payment_id": str(payment.id),
-                    "status": payment.status.value
-                }
+                    "status": PaymentStatus.SUCCEEDED.value,
+                },
             )
+
         except Exception:
             await broker.publish(
                 {
                     "payment_id": str(payment.id),
-                    "retry_count": 0
+                    "retry_count": 0,
                 },
-                queue="payments.retry"
+                queue="payments.retry",
             )

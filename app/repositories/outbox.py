@@ -1,32 +1,94 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, update, or_
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import OutboxStatus
 from app.models.outbox import Outbox
 
 
+LEASE_TIMEOUT = timedelta(minutes=2)
+
+
 class OutboxRepository:
-    def __init__(self, session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, event: Outbox) -> Outbox:
+    async def create(
+        self,
+        event: Outbox,
+    ) -> Outbox:
         self.session.add(event)
         return event
 
-    async def get_pending(self, limit: int = 100):
+    async def get_pending_for_update(
+            self,
+            limit: int = 100,
+    ) -> list[Outbox]:
         stmt = (
             select(Outbox)
-            .where(Outbox.status == OutboxStatus.PENDING)
-            .order_by(Outbox.created_at.asc())
+            .where(
+                or_(
+                    Outbox.status == OutboxStatus.PENDING,
+                    (
+                        (Outbox.status == OutboxStatus.PROCESSING)
+                        & (
+                            Outbox.processing_started_at
+                            < datetime.utcnow() - LEASE_TIMEOUT
+                        )
+                    ),
+                )
+            )
             .limit(limit)
+            .with_for_update(skip_locked=True)
         )
 
         result = await self.session.execute(stmt)
-        return result.scalars().all()
 
-    async def mark_published(self, event: Outbox) -> None:
-        event.status = OutboxStatus.PUBLISHED
-        event.published_at = datetime.utcnow()
+        return list(result.scalars().all())
 
-        self.session.add(event)
+    async def mark_processing(self, event_ids: list) -> list[Outbox]:
+        if not event_ids:
+            return []
+
+        stmt = (
+            update(Outbox)
+            .where(
+                Outbox.message_id.in_(event_ids),
+                Outbox.status == OutboxStatus.PENDING,
+            )
+            .values(
+                status=OutboxStatus.PROCESSING,
+                processing_started_at=datetime.utcnow(),
+            )
+            .returning(Outbox)
+        )
+
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def mark_processed(
+            self,
+            event_ids: list,
+    ) -> None:
+        if not event_ids:
+            return
+
+        await self.session.execute(
+            update(Outbox)
+            .where(Outbox.message_id.in_(event_ids))
+            .values(
+                status=OutboxStatus.PUBLISHED,
+                processing_started_at=None,
+                published_at=datetime.utcnow()
+            )
+        )
+
+    async def mark_failed(self, message_id):
+        await self.session.execute(
+            update(Outbox)
+            .where(Outbox.message_id == message_id)
+            .values(
+                status=OutboxStatus.FAILED,
+            )
+        )

@@ -3,8 +3,6 @@ from datetime import datetime
 
 from sqlalchemy import JSON
 from sqlalchemy import Enum
-from sqlalchemy import ForeignKey
-from sqlalchemy import Integer
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
@@ -29,6 +27,7 @@ class Outbox(Base, TimestampMixin):
 
     aggregate_id: Mapped[uuid.UUID] = mapped_column(
         nullable=False,
+        unique=True,
     )
 
     event_type: Mapped[str] = mapped_column(
@@ -47,10 +46,8 @@ class Outbox(Base, TimestampMixin):
         nullable=False,
     )
 
-    retry_count: Mapped[int] = mapped_column(
-        Integer,
-        default=0,
-        nullable=False,
+    processing_started_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
     )
 
     published_at: Mapped[datetime | None] = mapped_column(
