@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,12 +47,18 @@ class PaymentRepository:
         await self.session.execute(
             update(Payment)
             .where(Payment.id == payment_id)
-            .values(status=PaymentStatus.SUCCEEDED)
+            .values(
+                status=PaymentStatus.SUCCEEDED,
+                processed_at=datetime.now(timezone.utc),
+            )
         )
 
     async def mark_failed(self, payment_id):
         await self.session.execute(
             update(Payment)
             .where(Payment.id == payment_id)
-            .values(status=PaymentStatus.FAILED)
+            .values(
+                status=PaymentStatus.FAILED,
+                processed_at=datetime.now(timezone.utc),
+            )
         )

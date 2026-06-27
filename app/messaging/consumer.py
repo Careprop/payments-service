@@ -35,7 +35,7 @@ async def process_payment(event: PaymentEvent):
                 payment.webhook_url,
                 {
                     "payment_id": str(payment.id),
-                    "status": PaymentStatus.SUCCEEDED.value,
+                    "status": payment.status.value,
                 },
             )
 

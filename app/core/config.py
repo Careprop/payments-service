@@ -37,10 +37,10 @@ class Settings(BaseSettings):
     def amqp_url(self) -> str:
         return (
             f"amqp://"
-            f"{settings.rabbitmq_user}:"
-            f"{settings.rabbitmq_password}@"
-            f"{settings.rabbitmq_host}:"
-            f"{settings.rabbitmq_port}/"
+            f"{self.rabbitmq_user}:"
+            f"{self.rabbitmq_password}@"
+            f"{self.rabbitmq_host}:"
+            f"{self.rabbitmq_port}/"
         )
 
 

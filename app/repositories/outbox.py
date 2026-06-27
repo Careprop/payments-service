@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,7 +34,7 @@ class OutboxRepository:
                         (Outbox.status == OutboxStatus.PROCESSING)
                         & (
                             Outbox.processing_started_at
-                            < datetime.utcnow() - LEASE_TIMEOUT
+                            < datetime.now(timezone.utc) - LEASE_TIMEOUT
                         )
                     ),
                 )
@@ -55,11 +55,10 @@ class OutboxRepository:
             update(Outbox)
             .where(
                 Outbox.message_id.in_(event_ids),
-                Outbox.status == OutboxStatus.PENDING,
             )
             .values(
                 status=OutboxStatus.PROCESSING,
-                processing_started_at=datetime.utcnow(),
+                processing_started_at=datetime.now(timezone.utc),
             )
             .returning(Outbox)
         )
@@ -80,7 +79,7 @@ class OutboxRepository:
             .values(
                 status=OutboxStatus.PUBLISHED,
                 processing_started_at=None,
-                published_at=datetime.utcnow()
+                published_at=datetime.now(timezone.utc)
             )
         )
 
